@@ -57,6 +57,27 @@ while cap.isOpened():
             # Calculate Euclidean distance between the two tips
             distance = math.hypot(cx_index - cx_thumb, cy_index - cy_thumb)
 
+            # --- NEW PINCH TO MUTE FEATURE ---
+            # If fingers are practically touching (under 15 pixels), mute the system
+            if distance < 15:
+                smooth_vol = 0
+                cv2.putText(frame, 'MUTED 🤫', (40, 100), 
+                            cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
+            else:
+                # Map the pixel distance to Mac volume range (0 to 100)
+                target_vol = np.interp(distance, [20, 200], [0, 100])
+                
+                # Apply Exponential Smoothing
+                smooth_vol = (alpha * target_vol) + ((1 - alpha) * smooth_vol)
+                smooth_vol = int(np.clip(smooth_vol, 0, 100))
+
+            # Execute macOS native volume control command
+            os.system(f"osascript -e 'set volume output volume {smooth_vol}'")
+
+            # Display the volume percentage on the screen
+            cv2.putText(frame, f'Volume: {smooth_vol}%', (40, 50), 
+                        cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+
             # Map the pixel distance to Mac volume range (0 to 100)
             # Adjust 20 (pinched) and 200 (spread) based on how close you sit to the camera
             target_vol = np.interp(distance, [20, 300], [0, 100])
